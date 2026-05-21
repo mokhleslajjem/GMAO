@@ -1,0 +1,43 @@
+@using MiniGMAO.Components.Shared
+@using Microsoft.AspNetCore.Components.Authorization
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+
+                <Authorizing>
+                    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f9fafb;">
+                        <div style="text-align:center;color:#6b7280;">
+                            <div style="font-size:2rem;margin-bottom:1rem;">⏳</div>
+                            <p>Vérification des droits d'accès...</p>
+                        </div>
+                    </div>
+                </Authorizing>
+
+                <NotAuthorized>
+                    @{
+                        var returnUrl = Navigation?.Uri ?? "/";
+                    }
+                    <LayoutView Layout="typeof(EmptyLayout)">
+                        <RedirectToLogin />
+                    </LayoutView>
+                </NotAuthorized>
+
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <LayoutView Layout="typeof(MainLayout)">
+                <div class="gmao-page">
+                    <div class="page-header"><h1>404 – Page introuvable</h1></div>
+                    <p><a href="/dashboard">Retour au tableau de bord</a></p>
+                </div>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
+
+@code {
+    [Inject] NavigationManager? Navigation { get; set; }
+}

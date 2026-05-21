@@ -1,0 +1,24 @@
+@inject NavigationManager Navigation
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.Identity?.IsAuthenticated ?? true)
+        {
+            // Redirige vers login en conservant l'URL demandée
+            var currentUri = Navigation.Uri;
+            var loginUrl = $"/login?returnUrl={Uri.EscapeDataString(currentUri)}";
+            Navigation.NavigateTo(loginUrl, forceLoad: true);
+        }
+        else
+        {
+            // Authentifié mais pas autorisé → access-denied
+            Navigation.NavigateTo("/access-denied", forceLoad: true);
+        }
+    }
+}

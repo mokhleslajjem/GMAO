@@ -1,0 +1,56 @@
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Authorization
+
+<nav class="sidebar">
+    <div class="sidebar-brand">
+        <span class="brand-icon">⚙️</span>
+        <span class="brand-text">Mini GMAO</span>
+    </div>
+
+    <ul class="nav-list">
+        <li>
+            <NavLink href="/dashboard" Match="NavLinkMatch.All" class="nav-link" ActiveClass="active">
+                <span class="nav-icon">📊</span> Tableau de bord
+            </NavLink>
+        </li>
+        <li>
+            <NavLink href="/equipements" class="nav-link" ActiveClass="active">
+                <span class="nav-icon">⚙️</span> Équipements
+            </NavLink>
+        </li>
+        <li>
+            <NavLink href="/interventions" class="nav-link" ActiveClass="active">
+                <span class="nav-icon">🔧</span> Interventions
+            </NavLink>
+        </li>
+
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <li>
+                    <NavLink href="/techniciens" class="nav-link" ActiveClass="active">
+                        <span class="nav-icon">👷</span> Techniciens
+                    </NavLink>
+                </li>
+                <li>
+                    <NavLink href="/rapports" class="nav-link" ActiveClass="active">
+                        <span class="nav-icon">📈</span> Rapports
+                    </NavLink>
+                </li>
+            </Authorized>
+        </AuthorizeView>
+    </ul>
+
+    <div class="sidebar-footer">
+        <AuthorizeView>
+            <Authorized>
+                <div class="sidebar-user">
+                    <div class="sidebar-user-avatar">
+                        @(context.User.Identity?.Name?.Split('@')[0].ToUpper().FirstOrDefault())
+                    </div>
+                    <span class="sidebar-user-name">@context.User.Identity?.Name</span>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+        <div class="sidebar-version">Mini GMAO v1.0</div>
+    </div>
+</nav>

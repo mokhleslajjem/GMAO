@@ -1,0 +1,333 @@
+@page "/interventions"
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using MiniGMAO.Models
+@using MiniGMAO.Services.Interfaces
+@rendermode @(new InteractiveServerRenderMode())
+@inject IInterventionService InterventionService
+@inject IEquipementService EquipementService
+@inject ITechnicienService TechnicienService
+
+<PageTitle>Interventions – Mini GMAO</PageTitle>
+
+<div class="gmao-page">
+    <div class="page-header">
+        <h1>🔧 Interventions</h1>
+        <button class="btn btn-primary" @onclick="() => ShowForm(null)">+ Nouvelle intervention</button>
+    </div>
+
+    <div class="filter-bar">
+        <input class="filter-input" placeholder="Rechercher..." @bind="searchTerm" @bind:event="oninput" @onkeyup="LoadData" />
+        <select class="filter-select" @bind="filterStatut" @bind:after="LoadData">
+            <option value="">Tous statuts</option>
+            <option>Ouverte</option><option>En cours</option>
+            <option>Résolue</option><option>Clôturée</option>
+        </select>
+        <select class="filter-select" @bind="filterPriorite" @bind:after="LoadData">
+            <option value="">Toutes priorités</option>
+            <option>Critique</option><option>Haute</option>
+            <option>Normale</option><option>Basse</option>
+        </select>
+    </div>
+
+    <div class="section-card">
+        <table class="gmao-table">
+            <thead>
+                <tr>
+                    <th>Date</th><th>Équipement</th><th>Description</th>
+                    <th>Technicien</th><th class="center">Priorité</th>
+                    <th class="center">Statut</th><th class="right">Coût</th>
+                    <th class="center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var inv in interventions)
+                {
+                    <tr>
+                        <td>@inv.DateCreation.ToString("dd/MM/yy")</td>
+                        <td>@inv.Equipement?.Nom</td>
+                        <td class="trunc">@inv.Description</td>
+                        <td>@(inv.Technicien?.NomComplet ?? "—")</td>
+                        <td class="center"><span class="badge badge-@inv.Priorite.ToLower()">@inv.Priorite</span></td>
+                        <td class="center"><span class="badge badge-statut-@inv.Statut.Replace(" ","")">@inv.Statut</span></td>
+                        <td class="right">@inv.CoutTotal.ToString("N0") DT</td>
+                        <td class="center actions">
+                            <button class="btn btn-sm btn-secondary" @onclick="() => ShowDetail(inv)">👁️</button>
+                            <button class="btn btn-sm btn-secondary" @onclick="() => ShowForm(inv)">✏️</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(inv)">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (!interventions.Any())
+        {
+            <div class="empty-state">Aucune intervention trouvée.</div>
+        }
+    </div>
+</div>
+
+@if (showForm)
+{
+    <div class="modal-overlay" @onclick="CloseForm">
+        <div class="modal-box modal-large" @onclick:stopPropagation="true">
+            <h2>@(editModel.Id == 0 ? "Nouvelle" : "Modifier") intervention</h2>
+            <EditForm Model="editModel" OnValidSubmit="SaveIntervention">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="form-grid">
+                    <div class="field">
+                        <label>Équipement *</label>
+                        <InputSelect class="form-control" @bind-Value="editModel.EquipementId">
+                            <option value="0">-- Choisir --</option>
+                            @foreach (var eq in allEquipements)
+                            {
+                                <option value="@eq.Id">@eq.Nom (@eq.Localisation)</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="field">
+                        <label>Technicien</label>
+                        <select class="form-control" @onchange="OnTechnicienChanged">
+                            <option value="">Non assigné</option>
+                            @foreach (var t in allTechniciens)
+                            {
+                                <option value="@t.Id" selected="@(editModel.TechnicienId == t.Id)">
+                                    @t.NomComplet – @t.Specialite
+                                </option>
+                            }
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Priorité</label>
+                        <InputSelect class="form-control" @bind-Value="editModel.Priorite">
+                            <option>Basse</option><option>Normale</option>
+                            <option>Haute</option><option>Critique</option>
+                        </InputSelect>
+                    </div>
+                    <div class="field">
+                        <label>Statut</label>
+                        <InputSelect class="form-control" @bind-Value="editModel.Statut">
+                            <option>Ouverte</option><option>En cours</option>
+                            <option>Résolue</option><option>Clôturée</option>
+                        </InputSelect>
+                    </div>
+                    <div class="field">
+                        <label>Type</label>
+                        <InputSelect class="form-control" @bind-Value="editModel.TypeIntervention">
+                            <option>Corrective</option><option>Préventive</option>
+                        </InputSelect>
+                    </div>
+                    <div class="field">
+                        <label>Coût main d'œuvre (DT)</label>
+                        <InputNumber class="form-control" @bind-Value="editModel.CoutHeuresTotalTechnicien" />
+                    </div>
+                    <div class="field field-full">
+                        <label>Description *</label>
+                        <InputTextArea class="form-control" @bind-Value="editModel.Description" rows="3" />
+                        <ValidationMessage For="@(() => editModel.Description)" />
+                    </div>
+                    <div class="field field-full">
+                        <label>Rapport de résolution</label>
+                        <InputTextArea class="form-control" @bind-Value="editModel.Rapport" rows="3" />
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseForm">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@if (selectedIntervention != null)
+{
+    <div class="modal-overlay" @onclick="() => selectedIntervention = null">
+        <div class="modal-box modal-large" @onclick:stopPropagation="true">
+            <h2>Intervention #@selectedIntervention.Id</h2>
+            <div class="detail-grid">
+                <div><strong>Équipement :</strong> @selectedIntervention.Equipement?.Nom</div>
+                <div><strong>Technicien :</strong> @(selectedIntervention.Technicien?.NomComplet ?? "Non assigné")</div>
+                <div><strong>Statut :</strong> <span class="badge badge-statut-@selectedIntervention.Statut.Replace(" ","")">@selectedIntervention.Statut</span></div>
+                <div><strong>Priorité :</strong> <span class="badge badge-@selectedIntervention.Priorite.ToLower()">@selectedIntervention.Priorite</span></div>
+                <div class="full"><strong>Description :</strong> @selectedIntervention.Description</div>
+                @if (!string.IsNullOrEmpty(selectedIntervention.Rapport))
+                {
+                    <div class="full"><strong>Rapport :</strong> @selectedIntervention.Rapport</div>
+                }
+            </div>
+            <h3 style="margin-top:1.5rem">Pièces détachées</h3>
+            @if (selectedIntervention.PiecesDetachees.Any())
+            {
+                <table class="gmao-table">
+                    <thead><tr><th>Réf.</th><th>Désignation</th><th>Qté</th><th>Prix unit.</th><th>Total</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var p in selectedIntervention.PiecesDetachees)
+                        {
+                            <tr>
+                                <td>@p.Reference</td><td>@p.Designation</td>
+                                <td>@p.Quantite</td><td>@p.PrixUnitaire DT</td>
+                                <td><strong>@p.CoutTotal DT</strong></td>
+                                <td><button class="btn btn-sm btn-danger" @onclick="() => DeletePiece(p.Id)">🗑️</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            <div class="add-piece-form">
+                <h4>Ajouter une pièce</h4>
+                <EditForm Model="newPiece" OnValidSubmit="AddPiece">
+                    <div class="form-grid form-grid-5">
+                        <InputText class="form-control" @bind-Value="newPiece.Reference" placeholder="Référence" />
+                        <InputText class="form-control" @bind-Value="newPiece.Designation" placeholder="Désignation" />
+                        <InputNumber class="form-control" @bind-Value="newPiece.Quantite" placeholder="Qté" />
+                        <InputNumber class="form-control" @bind-Value="newPiece.PrixUnitaire" placeholder="Prix (DT)" />
+                        <button type="submit" class="btn btn-primary">Ajouter</button>
+                    </div>
+                </EditForm>
+            </div>
+            <div style="margin-top:1rem;text-align:right">
+                <strong>Coût total : @selectedIntervention.CoutTotal.ToString("N2") DT</strong>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @onclick="() => selectedIntervention = null">Fermer</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (interventionToDelete != null)
+{
+    <div class="modal-overlay" @onclick="() => interventionToDelete = null">
+        <div class="modal-box modal-small" @onclick:stopPropagation="true">
+            <h3>Confirmer la suppression</h3>
+            <p>Supprimer cette intervention ? Cette action est irréversible.</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @onclick="() => interventionToDelete = null">Annuler</button>
+                <button class="btn btn-danger" @onclick="DeleteConfirmed">Supprimer</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Intervention> interventions = new();
+    private List<Equipement> allEquipements = new();
+    private List<Technicien> allTechniciens = new();
+    private string searchTerm = "";
+    private string filterStatut = "";
+    private string filterPriorite = "";
+    private bool showForm = false;
+    private Intervention editModel = new();
+    private Intervention? selectedIntervention;
+    private Intervention? interventionToDelete;
+    private PieceDetachee newPiece = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        allEquipements = await EquipementService.GetAllAsync();
+        allTechniciens = await TechnicienService.GetAllAsync();
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        interventions = await InterventionService.GetAllAsync(searchTerm, filterStatut, filterPriorite);
+    }
+    private void OnTechnicienChanged(ChangeEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.Value?.ToString()))
+            editModel.TechnicienId = null;
+        else
+            editModel.TechnicienId = int.Parse(e.Value.ToString()!);
+    }
+
+    private void ShowForm(Intervention? inv)
+    {
+        if (inv == null)
+            editModel = new Intervention { Priorite = "Normale", Statut = "Ouverte", TypeIntervention = "Corrective" };
+        else
+            editModel = new Intervention
+            {
+                Id = inv.Id, EquipementId = inv.EquipementId, TechnicienId = inv.TechnicienId,
+                Description = inv.Description, Priorite = inv.Priorite, Statut = inv.Statut,
+                TypeIntervention = inv.TypeIntervention, Rapport = inv.Rapport,
+                CoutHeuresTotalTechnicien = inv.CoutHeuresTotalTechnicien
+            };
+        showForm = true;
+    }
+
+    private void CloseForm() => showForm = false;
+
+    private async Task SaveIntervention()
+    {
+        try
+        {
+            if (editModel.Id == 0)
+            {
+                await InterventionService.CreateAsync(editModel);
+            }
+            else
+            {
+                // Récupérer l'intervention existante pour détecter un changement de statut
+                var existing = await InterventionService.GetByIdAsync(editModel.Id);
+            
+                if (existing != null && existing.Statut != editModel.Statut)
+                {
+                    // D'abord mettre à jour les autres champs
+                    await InterventionService.UpdateAsync(editModel);
+                    // Ensuite appliquer le changement de statut avec la logique métier
+                    await InterventionService.ChangerStatutAsync(editModel.Id, editModel.Statut);
+                }
+                else
+                {
+                    await InterventionService.UpdateAsync(editModel);
+                }
+            }
+            showForm = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur SaveIntervention: {ex.Message}");
+        }
+    }
+
+    private async Task ShowDetail(Intervention inv)
+    {
+        selectedIntervention = await InterventionService.GetByIdAsync(inv.Id);
+        newPiece = new PieceDetachee { Quantite = 1 };
+    }
+
+    private async Task AddPiece()
+    {
+        if (selectedIntervention != null)
+        {
+            await InterventionService.AddPieceDetacheeAsync(selectedIntervention.Id, newPiece);
+            selectedIntervention = await InterventionService.GetByIdAsync(selectedIntervention.Id);
+            newPiece = new PieceDetachee { Quantite = 1 };
+            await LoadData();
+        }
+    }
+
+    private async Task DeletePiece(int id)
+    {
+        await InterventionService.RemovePieceDetacheeAsync(id);
+        if (selectedIntervention != null)
+            selectedIntervention = await InterventionService.GetByIdAsync(selectedIntervention.Id);
+        await LoadData();
+    }
+
+    private void ConfirmDelete(Intervention inv) => interventionToDelete = inv;
+
+    private async Task DeleteConfirmed()
+    {
+        if (interventionToDelete != null)
+        {
+            await InterventionService.DeleteAsync(interventionToDelete.Id);
+            interventionToDelete = null;
+            await LoadData();
+        }
+    }
+}

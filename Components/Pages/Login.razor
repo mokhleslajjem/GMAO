@@ -1,0 +1,158 @@
+@page "/login"
+@layout EmptyLayout
+
+<PageTitle>Connexion – Mini GMAO</PageTitle>
+
+<div class="login-root">
+
+    <div class="lp-left">
+        <div class="lp-left-inner">
+
+            <div class="lp-logo">
+                <div class="lp-logo-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07"/>
+                    </svg>
+                </div>
+                <span class="lp-logo-text">Mini GMAO</span>
+            </div>
+
+            <div class="lp-content">
+                <h1 class="lp-headline">
+                    Maintenance<br/>
+                    <span class="lp-headline-accent">sous contrôle.</span>
+                </h1>
+                <p class="lp-desc">
+                    Pilotez vos équipements, interventions<br/>
+                    et équipes depuis un seul endroit.
+                </p>
+
+                <div class="lp-features">
+                    <div class="lp-feature">
+                        <div class="lp-feature-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        </div>
+                        <span>Tableau de bord temps réel</span>
+                    </div>
+                    <div class="lp-feature">
+                        <div class="lp-feature-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                        </div>
+                        <span>Suivi des interventions</span>
+                    </div>
+                    <div class="lp-feature">
+                        <div class="lp-feature-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                        <span>Gestion des techniciens</span>
+                    </div>
+                    <div class="lp-feature">
+                        <div class="lp-feature-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        </div>
+                        <span>Rapports analytiques</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lp-kpis">
+                <div class="lp-kpi">
+                    <span class="lp-kpi-value">5</span>
+                    <span class="lp-kpi-label">Équipements</span>
+                </div>
+                <div class="lp-kpi-div"></div>
+                <div class="lp-kpi">
+                    <span class="lp-kpi-value">3</span>
+                    <span class="lp-kpi-label">Techniciens</span>
+                </div>
+                <div class="lp-kpi-div"></div>
+                <div class="lp-kpi">
+                    <span class="lp-kpi-value">99%</span>
+                    <span class="lp-kpi-label">Disponibilité</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="lp-right">
+        <div class="lp-form-wrap">
+
+            <div class="lp-form-top">
+                <div class="lp-form-avatar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="lp-form-title">Connexion</h2>
+                    <p class="lp-form-sub">Bienvenue ! Veuillez vous identifier.</p>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Error))
+            {
+                <div class="lp-error">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    @Error
+                </div>
+            }
+
+            <form method="post" action="/api/auth/login" data-enhance="false" class="lp-form">
+                @if (!string.IsNullOrEmpty(ReturnUrl))
+                {
+                    <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+                }
+
+                <div class="lp-field">
+                    <label for="email">Adresse e-mail</label>
+                    <div class="lp-input-wrap">
+                        <span class="lp-input-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        </span>
+                        <input id="email" type="email" name="email" class="lp-input"
+                               placeholder="admin@gmao.tn" required autocomplete="email" />
+                    </div>
+                </div>
+
+                <div class="lp-field">
+                    <label for="password">Mot de passe</label>
+                    <div class="lp-input-wrap">
+                        <span class="lp-input-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </span>
+                        <input id="password" type="password" name="password" class="lp-input"
+                               placeholder="••••••••" required autocomplete="current-password" />
+                    </div>
+                </div>
+
+                <button type="submit" class="lp-btn">
+                    Se connecter
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </button>
+            </form>
+
+            <div class="lp-hint">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span>Compte par défaut&nbsp;: <code>admin@gmao.tn</code> / <code>Admin123!</code></span>
+            </div>
+
+        </div>
+
+        <p class="lp-copyright">Mini GMAO v1.0 &nbsp;·&nbsp; © 2026 Tous droits réservés</p>
+    </div>
+
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+}

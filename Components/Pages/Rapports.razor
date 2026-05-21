@@ -1,0 +1,133 @@
+@page "/rapports"
+@rendermode @(new InteractiveServerRenderMode())
+@using MiniGMAO.Models
+@using MiniGMAO.Services.Interfaces
+@inject IInterventionService InterventionService
+@inject IEquipementService EquipementService
+
+<PageTitle>Rapports – Mini GMAO</PageTitle>
+
+<div class="gmao-page">
+    <div class="page-header">
+        <h1>📊 Rapports analytiques</h1>
+    </div>
+
+    <div class="filter-bar">
+        <label>Du :</label>
+        <input type="date" class="filter-input" @bind="dateDebut" @bind:after="LoadData" style="max-width:160px" />
+        <label>Au :</label>
+        <input type="date" class="filter-input" @bind="dateFin" @bind:after="LoadData" style="max-width:160px" />
+        <select class="filter-select" @bind="filterEquipId" @bind:after="LoadData">
+            <option value="0">Tous équipements</option>
+            @foreach (var eq in equipements)
+            {
+                <option value="@eq.Id">@eq.Nom</option>
+            }
+        </select>
+    </div>
+
+    @if (interventions == null)
+    {
+        <div class="loading">Chargement...</div>
+    }
+    else
+    {
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-blue">
+                <div class="kpi-value">@interventions.Count</div>
+                <div class="kpi-label">Interventions sur la période</div>
+            </div>
+            <div class="kpi-card kpi-orange">
+                <div class="kpi-value">@coutTotal.ToString("N0") DT</div>
+                <div class="kpi-label">Coût total</div>
+            </div>
+            <div class="kpi-card kpi-green">
+                <div class="kpi-value">@dureeResolutionMoyenne j</div>
+                <div class="kpi-label">Délai moyen de résolution</div>
+            </div>
+            <div class="kpi-card kpi-purple">
+                <div class="kpi-value">@tauxResolution%</div>
+                <div class="kpi-label">Taux de résolution</div>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                <h3>Détail des interventions</h3>
+                <span class="badge badge-statut-Ouverte">@interventions.Count résultats</span>
+            </div>
+            <table class="gmao-table">
+                <thead>
+                    <tr>
+                        <th>#</th><th>Date</th><th>Équipement</th>
+                        <th>Type</th><th>Priorité</th><th>Technicien</th>
+                        <th>Durée résol.</th><th class="right">Coût</th><th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var inv in interventions)
+                    {
+                        var duree = inv.DateResolution.HasValue
+                            ? (int)(inv.DateResolution.Value - inv.DateCreation).TotalDays
+                            : (int)(DateTime.Now - inv.DateCreation).TotalDays;
+                        <tr>
+                            <td>@inv.Id</td>
+                            <td>@inv.DateCreation.ToString("dd/MM/yy")</td>
+                            <td>@inv.Equipement?.Nom</td>
+                            <td>@inv.TypeIntervention</td>
+                            <td><span class="badge badge-@inv.Priorite.ToLower()">@inv.Priorite</span></td>
+                            <td>@(inv.Technicien?.NomComplet ?? "—")</td>
+                            <td>@duree j</td>
+                            <td class="right">@inv.CoutTotal.ToString("N0") DT</td>
+                            <td><span class="badge badge-statut-@inv.Statut.Replace(" ","")">@inv.Statut</span></td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="7"><strong>Total</strong></td>
+                        <td class="right"><strong>@coutTotal.ToString("N0") DT</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+            @if (!interventions.Any())
+            {
+                <div class="empty-state">Aucune intervention sur cette période.</div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Intervention>? interventions;
+    private List<Equipement> equipements = new();
+    private DateTime dateDebut = DateTime.Today.AddMonths(-3);
+    private DateTime dateFin = DateTime.Today;
+    private int filterEquipId = 0;
+
+    private decimal coutTotal => interventions?.Sum(i => i.CoutTotal) ?? 0;
+    private double tauxResolution => interventions?.Count > 0
+        ? Math.Round((double)interventions.Count(i => i.Statut == "Résolue" || i.Statut == "Clôturée") / interventions.Count * 100, 1) : 0;
+    private double dureeResolutionMoyenne
+    {
+        get
+        {
+            var resolues = interventions?.Where(i => i.DateResolution.HasValue).ToList();
+            if (resolues == null || !resolues.Any()) return 0;
+            return Math.Round(resolues.Average(i => (i.DateResolution!.Value - i.DateCreation).TotalDays), 1);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        equipements = await EquipementService.GetAllAsync();
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        var all = await InterventionService.GetAllAsync(equipementId: filterEquipId == 0 ? null : filterEquipId);
+        interventions = all.Where(i => i.DateCreation.Date >= dateDebut && i.DateCreation.Date <= dateFin).ToList();
+    }
+}

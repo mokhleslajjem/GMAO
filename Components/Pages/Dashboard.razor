@@ -1,0 +1,154 @@
+@page "/dashboard"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode())
+@using MiniGMAO.Models
+@using MiniGMAO.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@inject IDashboardService DashboardService
+
+<PageTitle>Tableau de bord – Mini GMAO</PageTitle>
+
+<div class="gmao-page">
+    <div class="page-header">
+        <h1>📊 Tableau de bord</h1>
+        <span class="subtitle">Vue d'ensemble de la maintenance</span>
+    </div>
+
+    @if (stats == null)
+    {
+        <div class="loading">Chargement des indicateurs...</div>
+    }
+    else
+    {
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-blue">
+                <div class="kpi-value">@stats.TotalEquipements</div>
+                <div class="kpi-label">Équipements</div>
+                <div class="kpi-sub">
+                    @stats.EquipementsOperationnels opérationnels ·
+                    @stats.EquipementsEnPanne en panne ·
+                    @stats.EquipementsEnMaintenance en maintenance
+                </div>
+            </div>
+            <div class="kpi-card kpi-orange">
+                <div class="kpi-value">@stats.InterventionsEnCours</div>
+                <div class="kpi-label">Interventions en cours</div>
+                <div class="kpi-sub">@stats.InterventionsOuvertes ouvertes · @stats.TotalInterventions total</div>
+            </div>
+            <div class="kpi-card kpi-green">
+                <div class="kpi-value">@stats.TauxResolution%</div>
+                <div class="kpi-label">Taux de résolution</div>
+                <div class="kpi-sub">@stats.InterventionsResolues interventions résolues</div>
+            </div>
+            <div class="kpi-card kpi-purple">
+                <div class="kpi-value">@stats.CoutTotalInterventions.ToString("N0") DT</div>
+                <div class="kpi-label">Coût total maintenance</div>
+                <div class="kpi-sub">@stats.TechniciensDisponibles/@stats.TotalTechniciens techniciens disponibles</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Interventions par mois</h3>
+                <canvas id="chartMois"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Répartition par priorité</h3>
+                <canvas id="chartPriorite"></canvas>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <h3>Top équipements – nombre d'interventions</h3>
+            <table class="gmao-table">
+                <thead>
+                    <tr>
+                        <th>Équipement</th>
+                        <th class="center">Nb interventions</th>
+                        <th class="right">Coût total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var eq in stats.Top5EquipementsPannes)
+                    {
+                        <tr>
+                            <td>@eq.NomEquipement</td>
+                            <td class="center">
+                                <div class="bar-container">
+                                    <div class="bar" style="width: @(Math.Min(eq.NombreInterventions * 40, 200))px">
+                                        @eq.NombreInterventions
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="right">@eq.CoutTotal.ToString("N0") DT</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section-card">
+            <h3>Dernières interventions</h3>
+            <table class="gmao-table">
+                <thead>
+                    <tr>
+                        <th>Date</th><th>Équipement</th><th>Description</th>
+                        <th>Priorité</th><th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var inv in stats.DernieresInterventions)
+                    {
+                        <tr>
+                            <td>@inv.DateCreation.ToString("dd/MM/yy")</td>
+                            <td>@inv.Equipement?.Nom</td>
+                            <td class="trunc">@inv.Description</td>
+                            <td><span class="badge badge-@inv.Priorite.ToLower()">@inv.Priorite</span></td>
+                            <td><span class="badge badge-statut-@inv.Statut.Replace(" ","")">@inv.Statut</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <script>
+        (function () {
+            const moisLabels = @System.Text.Json.JsonSerializer.Serialize(stats.InterventionsParMois.Select(m => m.Mois).ToList());
+            const moisData   = @System.Text.Json.JsonSerializer.Serialize(stats.InterventionsParMois.Select(m => m.Nombre).ToList());
+            new Chart(document.getElementById('chartMois'), {
+                type: 'bar',
+                data: {
+                    labels: moisLabels,
+                    datasets: [{ label: 'Interventions', data: moisData, backgroundColor: '#3B82F6', borderRadius: 6 }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+
+            const prioLabels = @System.Text.Json.JsonSerializer.Serialize(stats.InterventionsParPriorite.Select(p => p.Priorite).ToList());
+            const prioData   = @System.Text.Json.JsonSerializer.Serialize(stats.InterventionsParPriorite.Select(p => p.Nombre).ToList());
+            new Chart(document.getElementById('chartPriorite'), {
+                type: 'doughnut',
+                data: {
+                    labels: prioLabels,
+                    datasets: [{ data: prioData, backgroundColor: ['#EF4444','#F97316','#3B82F6','#6B7280'] }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            });
+        })();
+        </script>
+    }
+</div>
+
+@code {
+    private DashboardStats? stats;
+
+    protected override async Task OnInitializedAsync()
+    {
+        stats = await DashboardService.GetStatsAsync();
+    }
+}

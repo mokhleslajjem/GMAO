@@ -1,0 +1,193 @@
+@page "/equipements"
+@attribute [Authorize]
+@rendermode @(new InteractiveServerRenderMode())
+@using MiniGMAO.Models
+@using MiniGMAO.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@inject IEquipementService EquipementService
+
+<PageTitle>Équipements – Mini GMAO</PageTitle>
+
+<div class="gmao-page">
+    <div class="page-header">
+        <h1>⚙️ Équipements</h1>
+        <button class="btn btn-primary" @onclick="() => ShowForm(null)">+ Ajouter</button>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert-error">
+            ⚠️ @errorMessage
+            <button @onclick="() => errorMessage = null">✕</button>
+        </div>
+    }
+
+    <div class="filter-bar">
+        <input class="filter-input" placeholder="Rechercher..." @bind="searchTerm" @bind:event="oninput" @onkeyup="LoadData" />
+        <select class="filter-select" @bind="filterStatut" @bind:after="LoadData">
+            <option value="">Tous les statuts</option>
+            <option>Opérationnel</option>
+            <option>En panne</option>
+            <option>En maintenance</option>
+        </select>
+        <select class="filter-select" @bind="filterType" @bind:after="LoadData">
+            <option value="">Tous les types</option>
+            @foreach (var t in types) { <option>@t</option> }
+        </select>
+    </div>
+
+    <div class="section-card">
+        <table class="gmao-table">
+            <thead>
+                <tr>
+                    <th>Nom</th><th>Type</th><th>Localisation</th>
+                    <th class="center">Statut</th><th class="center">Interventions</th>
+                    <th class="center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var eq in equipements)
+                {
+                    <tr>
+                        <td><strong>@eq.Nom</strong></td>
+                        <td>@eq.TypeEquipement</td>
+                        <td>@eq.Localisation</td>
+                        <td class="center">
+                            <span class="badge badge-statut-@eq.Statut.Replace(" ","")">@eq.Statut</span>
+                        </td>
+                        <td class="center">@eq.Interventions.Count</td>
+                        <td class="center actions">
+                            <button class="btn btn-sm btn-secondary" @onclick="() => ShowForm(eq)">✏️</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(eq)">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (!equipements.Any())
+        {
+            <div class="empty-state">Aucun équipement trouvé.</div>
+        }
+    </div>
+</div>
+
+@if (showForm)
+{
+    <div class="modal-overlay" @onclick="CloseForm">
+        <div class="modal-box" @onclick:stopPropagation="true">
+            <h2>@(editModel.Id == 0 ? "Ajouter" : "Modifier") un équipement</h2>
+            <EditForm Model="editModel" OnValidSubmit="SaveEquipement">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="form-grid">
+                    <div class="field">
+                        <label>Nom *</label>
+                        <InputText class="form-control" @bind-Value="editModel.Nom" />
+                        <ValidationMessage For="@(() => editModel.Nom)" />
+                    </div>
+                    <div class="field">
+                        <label>Type *</label>
+                        <InputText class="form-control" @bind-Value="editModel.TypeEquipement" />
+                    </div>
+                    <div class="field">
+                        <label>Localisation *</label>
+                        <InputText class="form-control" @bind-Value="editModel.Localisation" />
+                    </div>
+                    <div class="field">
+                        <label>Statut</label>
+                        <InputSelect class="form-control" @bind-Value="editModel.Statut">
+                            <option>Opérationnel</option>
+                            <option>En panne</option>
+                            <option>En maintenance</option>
+                        </InputSelect>
+                    </div>
+                    <div class="field">
+                        <label>Date installation</label>
+                        <InputDate class="form-control" @bind-Value="editModel.DateInstallation" />
+                    </div>
+                    <div class="field field-full">
+                        <label>Description</label>
+                        <InputTextArea class="form-control" @bind-Value="editModel.Description" rows="3" />
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseForm">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@if (equipementToDelete != null)
+{
+    <div class="modal-overlay" @onclick="() => equipementToDelete = null">
+        <div class="modal-box modal-small" @onclick:stopPropagation="true">
+            <h3>Confirmer la suppression</h3>
+            <p>Supprimer <strong>@equipementToDelete.Nom</strong> ?</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @onclick="() => equipementToDelete = null">Annuler</button>
+                <button class="btn btn-danger" @onclick="DeleteConfirmed">Supprimer</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string? errorMessage;
+    private List<Equipement> equipements = new();
+    private List<string> types = new();
+    private string searchTerm = "";
+    private string filterStatut = "";
+    private string filterType = "";
+    private bool showForm = false;
+    private Equipement editModel = new();
+    private Equipement? equipementToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        types = await EquipementService.GetTypesAsync();
+        await LoadData();
+    }
+
+    private async Task LoadData()
+        => equipements = await EquipementService.GetAllAsync(searchTerm, filterStatut, filterType);
+
+    private void ShowForm(Equipement? eq)
+    {
+        editModel = eq == null ? new Equipement() : new Equipement
+        {
+            Id = eq.Id, Nom = eq.Nom, TypeEquipement = eq.TypeEquipement,
+            Localisation = eq.Localisation, Statut = eq.Statut,
+            DateInstallation = eq.DateInstallation, Description = eq.Description
+        };
+        showForm = true;
+    }
+
+    private void CloseForm() => showForm = false;
+
+    private async Task SaveEquipement()
+    {
+        try
+        {
+            if (editModel.Id == 0) await EquipementService.CreateAsync(editModel);
+            else await EquipementService.UpdateAsync(editModel);
+            showForm = false;
+            types = await EquipementService.GetTypesAsync();
+            await LoadData();
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    private void ConfirmDelete(Equipement eq) => equipementToDelete = eq;
+
+    private async Task DeleteConfirmed()
+    {
+        if (equipementToDelete != null)
+        {
+            await EquipementService.DeleteAsync(equipementToDelete.Id);
+            equipementToDelete = null;
+            await LoadData();
+        }
+    }
+}

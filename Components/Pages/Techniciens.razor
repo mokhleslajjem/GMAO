@@ -1,0 +1,319 @@
+@page "/techniciens"
+@attribute [Authorize(Roles = "Admin")]
+@rendermode @(new InteractiveServerRenderMode())
+@using MiniGMAO.Models
+@using MiniGMAO.Services.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@inject ITechnicienService TechnicienService
+
+<PageTitle>Techniciens – Mini GMAO</PageTitle>
+
+<div class="gmao-page">
+    <div class="page-header">
+        <h1>👷 Techniciens</h1>
+        <button class="btn btn-primary" @onclick="() => ShowForm(null)">+ Ajouter</button>
+    </div>
+
+    @if (errorMessage != null)
+    {
+        <div class="alert-error">
+            ⚠️ @errorMessage
+            <button @onclick="() => errorMessage = null">✕</button>
+        </div>
+    }
+
+    <div class="filter-bar">
+        <input class="filter-input" placeholder="Rechercher nom, spécialité..."
+               @bind="searchTerm" @bind:event="oninput" @onkeyup="LoadData" />
+        <select class="filter-select" @bind="filterDispo" @bind:after="LoadData">
+            <option value="">Tous</option>
+            <option value="true">Disponibles</option>
+            <option value="false">Non disponibles</option>
+        </select>
+    </div>
+
+    <div class="tech-grid">
+        @foreach (var t in techniciens)
+        {
+            <div class="tech-card">
+                <div class="tech-avatar">@t.Prenom[0]@t.Nom[0]</div>
+                <div class="tech-info">
+                    <div class="tech-name">@t.NomComplet</div>
+                    <div class="tech-specialite">@t.Specialite</div>
+                    @if (!string.IsNullOrEmpty(t.Email))
+                    {
+                        <div class="tech-email">✉️ @t.Email</div>
+                    }
+                    <div class="tech-stats">
+                        <span class="badge @(t.EstDisponible ? "badge-disponible" : "badge-indisponible")">
+                            @(t.EstDisponible ? "Disponible" : "Occupé")
+                        </span>
+                        <span class="tech-count">@t.Interventions.Count interventions</span>
+                        @if (t.UserId != null)
+                        {
+                            <span class="badge badge-compte-actif">✓ Compte actif</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-compte-none">Pas de compte</span>
+                        }
+                    </div>
+                </div>
+                <div class="tech-actions">
+                    <button class="btn btn-sm btn-secondary" @onclick="() => ShowForm(t)" title="Modifier">✏️</button>
+                    @if (t.UserId == null)
+                    {
+                        <button class="btn btn-sm btn-compte" @onclick="() => CreerCompte(t)"
+                                title="Créer un compte de connexion">
+                            🔑 Créer compte
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-danger" @onclick="() => ConfirmSupprimerCompte(t)"
+                                title="Supprimer le compte de connexion">
+                            🚫 Compte
+                        </button>
+                    }
+                    <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDelete(t)" title="Supprimer le technicien">🗑️</button>
+                </div>
+            </div>
+        }
+        @if (!techniciens.Any())
+        {
+            <div class="empty-state" style="grid-column:1/-1">Aucun technicien trouvé.</div>
+        }
+    </div>
+</div>
+
+@* Modal : Ajouter / Modifier technicien *@
+@if (showForm)
+{
+    <div class="modal-overlay" @onclick="CloseForm">
+        <div class="modal-box" @onclick:stopPropagation="true">
+            <h2>@(editModel.Id == 0 ? "Ajouter" : "Modifier") un technicien</h2>
+            <EditForm Model="editModel" OnValidSubmit="SaveTechnicien">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="form-grid">
+                    <div class="field">
+                        <label>Nom *</label>
+                        <InputText class="form-control" @bind-Value="editModel.Nom" />
+                        <ValidationMessage For="@(() => editModel.Nom)" />
+                    </div>
+                    <div class="field">
+                        <label>Prénom *</label>
+                        <InputText class="form-control" @bind-Value="editModel.Prenom" />
+                        <ValidationMessage For="@(() => editModel.Prenom)" />
+                    </div>
+                    <div class="field">
+                        <label>Spécialité *</label>
+                        <InputText class="form-control" @bind-Value="editModel.Specialite" />
+                        <ValidationMessage For="@(() => editModel.Specialite)" />
+                    </div>
+                    <div class="field">
+                        <label>Email</label>
+                        <InputText class="form-control" @bind-Value="editModel.Email" />
+                        <ValidationMessage For="@(() => editModel.Email)" />
+                    </div>
+                    <div class="field">
+                        <label>Téléphone</label>
+                        <InputText class="form-control" @bind-Value="editModel.Telephone" />
+                    </div>
+                    <div class="field" style="display:flex;align-items:center;gap:0.75rem;padding-top:1.5rem">
+                        <InputCheckbox @bind-Value="editModel.EstDisponible" id="dispo" />
+                        <label for="dispo" style="margin:0;font-weight:500;text-transform:none">Disponible</label>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseForm">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@* Modal : Confirmation suppression technicien *@
+@if (techToDelete != null)
+{
+    <div class="modal-overlay" @onclick="() => techToDelete = null">
+        <div class="modal-box modal-small" @onclick:stopPropagation="true">
+            <h3>Confirmer la suppression</h3>
+            <p>Supprimer <strong>@techToDelete.NomComplet</strong> ?</p>
+            @if (techToDelete.UserId != null)
+            {
+                <p style="color:#dc2626;font-size:0.85rem;margin-top:0.5rem">
+                    ⚠️ Le compte de connexion associé sera également supprimé.
+                </p>
+            }
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @onclick="() => techToDelete = null">Annuler</button>
+                <button class="btn btn-danger" @onclick="DeleteConfirmed">Supprimer</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal : Confirmation suppression compte *@
+@if (techCompteToDelete != null)
+{
+    <div class="modal-overlay" @onclick="() => techCompteToDelete = null">
+        <div class="modal-box modal-small" @onclick:stopPropagation="true">
+            <h3>Supprimer le compte</h3>
+            <p>Supprimer le compte de connexion de <strong>@techCompteToDelete.NomComplet</strong> ?</p>
+            <p style="color:#dc2626;font-size:0.85rem;margin-top:0.5rem">
+                Le technicien ne pourra plus se connecter à l'application.
+            </p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @onclick="() => techCompteToDelete = null">Annuler</button>
+                <button class="btn btn-danger" @onclick="SupprimerCompteConfirmed">Supprimer le compte</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal : Affichage mot de passe temporaire *@
+@if (showPasswordModal)
+{
+    <div class="modal-overlay" @onclick="() => showPasswordModal = false">
+        <div class="modal-box modal-small" @onclick:stopPropagation="true">
+            <h3 style="color:#16a34a">✅ Compte créé avec succès</h3>
+            <p style="margin:1rem 0 0.5rem">Technicien : <strong>@newAccountTechName</strong></p>
+            <p style="font-size:0.85rem;color:#64748b;margin-bottom:1rem">
+                Communiquez ces identifiants au technicien. Le mot de passe doit être changé à la première connexion.
+            </p>
+            <div class="password-display">
+                <div class="pwd-row">
+                    <span class="pwd-label">Email</span>
+                    <code class="pwd-value">@newAccountEmail</code>
+                </div>
+                <div class="pwd-row">
+                    <span class="pwd-label">Mot de passe</span>
+                    <code class="pwd-value">@newAccountPassword</code>
+                </div>
+            </div>
+            <p style="font-size:0.78rem;color:#94a3b8;margin-top:1rem">
+                ⚠️ Notez ce mot de passe maintenant, il ne sera plus affiché.
+            </p>
+            <div class="modal-actions">
+                <button class="btn btn-primary" @onclick="() => showPasswordModal = false">Compris, fermer</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string? errorMessage;
+    private List<Technicien> techniciens = new();
+    private string searchTerm = "";
+    private string filterDispo = "";
+    private bool showForm = false;
+    private Technicien editModel = new();
+    private Technicien? techToDelete;
+    private Technicien? techCompteToDelete;
+
+    // Modal mot de passe
+    private bool showPasswordModal = false;
+    private string newAccountTechName = "";
+    private string newAccountEmail = "";
+    private string newAccountPassword = "";
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        bool? dispo = filterDispo == "true" ? true : filterDispo == "false" ? false : null;
+        techniciens = await TechnicienService.GetAllAsync(searchTerm, dispo);
+    }
+
+    private void ShowForm(Technicien? t)
+    {
+        editModel = t == null ? new Technicien() : new Technicien
+        {
+            Id = t.Id, Nom = t.Nom, Prenom = t.Prenom,
+            Specialite = t.Specialite, Email = t.Email,
+            Telephone = t.Telephone, EstDisponible = t.EstDisponible
+        };
+        showForm = true;
+    }
+
+    private void CloseForm() => showForm = false;
+
+    private async Task SaveTechnicien()
+    {
+        try
+        {
+            if (editModel.Id == 0)
+                await TechnicienService.CreateAsync(editModel);
+            else
+                await TechnicienService.UpdateAsync(editModel);
+            showForm = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task CreerCompte(Technicien t)
+    {
+        try
+        {
+            var (success, password) = await TechnicienService.CreateCompteAsync(t.Id);
+            if (success)
+            {
+                newAccountTechName = t.NomComplet;
+                newAccountEmail    = t.Email!;
+                newAccountPassword = password;
+                showPasswordModal  = true;
+                await LoadData();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private void ConfirmSupprimerCompte(Technicien t) => techCompteToDelete = t;
+
+    private async Task SupprimerCompteConfirmed()
+    {
+        if (techCompteToDelete != null)
+        {
+            try
+            {
+                await TechnicienService.DeleteCompteAsync(techCompteToDelete.Id);
+                techCompteToDelete = null;
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                techCompteToDelete = null;
+            }
+        }
+    }
+
+    private void ConfirmDelete(Technicien t) => techToDelete = t;
+
+    private async Task DeleteConfirmed()
+    {
+        if (techToDelete != null)
+        {
+            try
+            {
+                await TechnicienService.DeleteAsync(techToDelete.Id);
+                techToDelete = null;
+                await LoadData();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = ex.Message;
+                techToDelete = null;
+            }
+        }
+    }
+}

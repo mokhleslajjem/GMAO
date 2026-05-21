@@ -1,0 +1,33 @@
+@page "/access-denied"
+@layout EmptyLayout
+@inject NavigationManager Navigation
+
+<PageTitle>Accès refusé – Mini GMAO</PageTitle>
+
+<div class="login-wrapper">
+    <div class="login-card" style="max-width:480px;text-align:center;">
+
+        <div style="font-size:4rem;margin-bottom:1rem;">🔒</div>
+
+        <h2 style="color:#dc2626;margin-bottom:0.5rem;">Accès refusé</h2>
+        <p style="color:#6b7280;margin-bottom:2rem;">
+            Vous n'avez pas les permissions nécessaires pour accéder à cette page.
+        </p>
+
+        <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+            <button class="btn btn-primary" @onclick="GoHome">
+                🏠 Tableau de bord
+            </button>
+            <form method="post" action="/api/auth/logout" data-enhance="false">
+                <button type="submit" class="btn btn-secondary">
+                    🚪 Se déconnecter
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private void GoHome() => Navigation.NavigateTo("/dashboard");
+}

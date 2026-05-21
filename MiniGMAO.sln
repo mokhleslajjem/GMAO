@@ -1,0 +1,24 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MiniGMAO", "MiniGMAO.csproj", "{F0A98DCA-88F1-F508-F9A8-F9A44E59FEFD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F0A98DCA-88F1-F508-F9A8-F9A44E59FEFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F0A98DCA-88F1-F508-F9A8-F9A44E59FEFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F0A98DCA-88F1-F508-F9A8-F9A44E59FEFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F0A98DCA-88F1-F508-F9A8-F9A44E59FEFD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C56F5D84-A9BF-4BFC-B122-9047F8CD5D2D}
+	EndGlobalSection
+EndGlobal
